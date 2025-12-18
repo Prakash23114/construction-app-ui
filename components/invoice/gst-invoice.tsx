@@ -8,14 +8,19 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { FileText, Download, CheckCircle2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { generateInvoicePDF } from "@/lib/pdf-generator"
 
 export function GSTInvoice() {
   const [isPaid, setIsPaid] = useState(false)
-  const [invoiceDetails, setInvoiceDetails] = useState({
+  const [isGenerated, setIsGenerated] = useState(false)
+  const { toast } = useToast()
+
+  const [invoiceDetails] = useState({
     companyGSTIN: "27AABCU9603R1ZM",
     companyName: "ConstructPro Pvt. Ltd.",
     companyAddress: "123 Builder Street, Mumbai, Maharashtra - 400001",
-    clientName: "ABC Developers Ltd.",
+    clientName: "Abhilasa Tower",
     clientGSTIN: "29GGGGG1314R9Z6",
     clientAddress: "456 Client Avenue, Bangalore, Karnataka - 560001",
   })
@@ -32,16 +37,45 @@ export function GSTInvoice() {
   const total = subtotal + cgst + sgst + igst
 
   const handleGenerate = () => {
-    console.log("Generating GST Invoice...")
+    setIsGenerated(true)
+    toast({
+      title: "Invoice Generated",
+      description: "GST Invoice INV-6 has been generated successfully.",
+    })
   }
 
   const handleDownload = () => {
-    console.log("Downloading PDF...")
+    generateInvoicePDF({
+      invoiceNumber: "6",
+      invoiceDate: new Date().toISOString().split("T")[0],
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      companyName: invoiceDetails.companyName,
+      companyGSTIN: invoiceDetails.companyGSTIN,
+      companyAddress: invoiceDetails.companyAddress,
+      clientName: invoiceDetails.clientName,
+      clientGSTIN: invoiceDetails.clientGSTIN,
+      clientAddress: invoiceDetails.clientAddress,
+      items: invoiceItems,
+      subtotal,
+      cgst,
+      sgst,
+      igst,
+      total,
+      isPaid,
+    })
+
+    toast({
+      title: "PDF Downloaded",
+      description: `invoice-6-${invoiceDetails.clientName.replace(/\s+/g, "-")}.pdf has been downloaded.`,
+    })
   }
 
   const handleMarkPaid = () => {
     setIsPaid(true)
-    console.log("Marked as paid")
+    toast({
+      title: "Payment Recorded",
+      description: "Invoice has been marked as paid successfully.",
+    })
   }
 
   return (
@@ -118,7 +152,7 @@ export function GSTInvoice() {
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="invoiceNumber">Invoice Number</Label>
-              <Input id="invoiceNumber" value="INV-2024-090" readOnly className="bg-muted/30" />
+              <Input id="invoiceNumber" value="6" readOnly className="bg-muted/30" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="invoiceDate">Invoice Date</Label>
@@ -225,13 +259,13 @@ export function GSTInvoice() {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
-        <Button onClick={handleGenerate} size="lg" className="gap-2">
+        <Button onClick={handleGenerate} size="lg" className="gap-2" disabled={isGenerated}>
           <FileText className="size-4" />
-          Generate Invoice
+          {isGenerated ? "Invoice Generated" : "Generate Invoice"}
         </Button>
         <Button onClick={handleDownload} variant="outline" size="lg" className="gap-2 bg-transparent">
           <Download className="size-4" />
-          Download PDF
+          Download Invoice
         </Button>
         {!isPaid && (
           <Button onClick={handleMarkPaid} variant="outline" size="lg" className="gap-2 bg-transparent">

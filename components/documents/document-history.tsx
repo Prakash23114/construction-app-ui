@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Download, Search, Filter } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { generateSampleDocumentPDF } from "@/lib/pdf-generator"
 
 type Document = {
   id: string
@@ -139,8 +141,17 @@ export function DocumentHistory() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateRange, setDateRange] = useState("all")
+  const { toast } = useToast()
 
-  const renderDocumentTable = (documents: Document[]) => {
+  const handleDownload = (doc: Document, type: string) => {
+    generateSampleDocumentPDF(doc.number, type)
+    toast({
+      title: "PDF Downloaded",
+      description: `${doc.number}.pdf has been downloaded successfully.`,
+    })
+  }
+
+  const renderDocumentTable = (documents: Document[], documentType: string) => {
     const filteredDocs = documents.filter((doc) => {
       const matchesSearch =
         doc.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -199,7 +210,12 @@ export function DocumentHistory() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDownload(doc, documentType)}
+                    >
                       <Download className="size-4" />
                     </Button>
                   </TableCell>
@@ -287,19 +303,19 @@ export function DocumentHistory() {
             </TabsList>
 
             <TabsContent value="quotations" className="space-y-4">
-              {renderDocumentTable(quotations)}
+              {renderDocumentTable(quotations, "Quotation")}
             </TabsContent>
 
             <TabsContent value="purchase-orders" className="space-y-4">
-              {renderDocumentTable(purchaseOrders)}
+              {renderDocumentTable(purchaseOrders, "Purchase Order")}
             </TabsContent>
 
             <TabsContent value="material-orders" className="space-y-4">
-              {renderDocumentTable(materialOrders)}
+              {renderDocumentTable(materialOrders, "Material Order")}
             </TabsContent>
 
             <TabsContent value="gst-invoices" className="space-y-4">
-              {renderDocumentTable(gstInvoices)}
+              {renderDocumentTable(gstInvoices, "GST Invoice")}
             </TabsContent>
           </Tabs>
         </CardContent>

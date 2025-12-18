@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { FileCheck, Download } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { generatePurchaseOrderPDF } from "@/lib/pdf-generator"
 
 const quotationItems = [
   { id: "1", name: "Cement (50kg bags)", quantity: 100, rate: 450, amount: 45000 },
@@ -22,6 +24,7 @@ export function POCreation() {
   const [deliveryDate, setDeliveryDate] = useState("")
   const [isApproved, setIsApproved] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const { toast } = useToast()
 
   const subtotal = quotationItems.reduce((sum, item) => sum + item.amount, 0)
   const gstAmount = subtotal * 0.18
@@ -46,12 +49,37 @@ export function POCreation() {
   const handleApprove = () => {
     if (validateForm()) {
       setIsApproved(true)
-      console.log("PO Approved and Generated")
+      toast({
+        title: "Purchase Order Approved",
+        description: "PO-2024-047 has been generated and approved successfully.",
+      })
     }
   }
 
   const handleDownload = () => {
-    console.log("Downloading PDF...")
+    const vendorNames: Record<string, string> = {
+      "vendor-1": "ABC Building Materials Ltd.",
+      "vendor-2": "XYZ Construction Supplies",
+      "vendor-3": "Prime Materials Co.",
+      "vendor-4": "BuildMart Suppliers",
+    }
+
+    generatePurchaseOrderPDF({
+      poNumber: "PO-2024-047",
+      vendor: vendorNames[vendor] || "Selected Vendor",
+      issueDate,
+      deliveryDate,
+      items: quotationItems,
+      subtotal,
+      gstAmount,
+      total,
+      isApproved,
+    })
+
+    toast({
+      title: "PDF Downloaded",
+      description: "Purchase order PDF has been downloaded successfully.",
+    })
   }
 
   return (

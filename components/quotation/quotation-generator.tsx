@@ -9,22 +9,40 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Trash2, Save, FileText } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { generateQuotationPDF } from "@/lib/pdf-generator"
 
 type QuotationItem = {
   id: string
-  name: string
-  quantity: number
+  description: string
+  area: number
   rate: number
   amount: number
 }
 
 export function QuotationGenerator() {
   const [items, setItems] = useState<QuotationItem[]>([
-    { id: "1", name: "Cement (50kg bags)", quantity: 100, rate: 450, amount: 45000 },
-    { id: "2", name: "Steel Rods (12mm)", quantity: 50, rate: 680, amount: 34000 },
+    {
+      id: "1",
+      description:
+        "PATCH WORK EXTERNAL CEMENT PLASTER: Carefully breaking and removing in patches the existing external plaster of walls, etc in patches without damaging the plaster, brickwork in the vicinity including cutting a groove first to demarcate the exact area & coating away of the debris, cleaning etc. complete. Providing and applying 20-25 mm thk cement plaster in two coats with first coat in 12-15 mm thick in 1:5 C.M and second coat in 8-10 mm thick in C.M 1:3 finished in proper line and level including adding Dr. Fixit Pidiproof LW+ 200 ml per 50 kg bag of cement in both the coats of M/s Pidilite Industries Ltd.",
+      area: 100,
+      rate: 90,
+      amount: 9000,
+    },
+    {
+      id: "2",
+      description:
+        "Application Of Dr. Fixit Raincoat Classic System - Exterior Waterproof Coating: Providing & Apply one coats of Dr. Fixit Raincoat Waterproof Coating without any dilution Maintain the spreading rate of 4.20 - 4.70 Sq.mtr per litre / coat application to achieve about 100-120 microns DFT. Apply second coat of Dr. Fixit Raincoat Classic Top Coat with interval of 6-8 hours without any dilution spreading rate of 6.0 - 6.5 Sq.mtr / litre / coat to achieve DFT of 50 - 60 microns. The material having following technical properties: Attains hairline crack bridging up to 2 mm, Elongation of >100 % as per ASTMD 412; Tensile strength 2.50 Mpa per ASTM D 412, Complies to anti carbonation test as per EN 1062 part 6 the system comes with 7 years waterproofing & 10 years paint performance warranty from M/S Pidilite industries Ltd.",
+      area: 3000,
+      rate: 18,
+      amount: 54000,
+    },
   ])
   const [gstRate, setGstRate] = useState("18")
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isGenerated, setIsGenerated] = useState(false)
+  const { toast } = useToast()
 
   const [clientDetails, setClientDetails] = useState({
     name: "",
@@ -36,8 +54,8 @@ export function QuotationGenerator() {
   const addItem = () => {
     const newItem: QuotationItem = {
       id: Date.now().toString(),
-      name: "",
-      quantity: 0,
+      description: "",
+      area: 0,
       rate: 0,
       amount: 0,
     }
@@ -53,8 +71,8 @@ export function QuotationGenerator() {
       items.map((item) => {
         if (item.id === id) {
           const updated = { ...item, [field]: value }
-          if (field === "quantity" || field === "rate") {
-            updated.amount = updated.quantity * updated.rate
+          if (field === "area" || field === "rate") {
+            updated.amount = updated.area * updated.rate
           }
           return updated
         }
@@ -85,11 +103,11 @@ export function QuotationGenerator() {
     }
 
     items.forEach((item, index) => {
-      if (!item.name.trim()) {
-        newErrors[`itemName${index}`] = "Item name is required"
+      if (!item.description.trim()) {
+        newErrors[`itemDesc${index}`] = "Item description is required"
       }
-      if (item.quantity <= 0) {
-        newErrors[`itemQty${index}`] = "Quantity must be greater than 0"
+      if (item.area <= 0) {
+        newErrors[`itemArea${index}`] = "Area must be greater than 0"
       }
       if (item.rate <= 0) {
         newErrors[`itemRate${index}`] = "Rate must be greater than 0"
@@ -101,12 +119,37 @@ export function QuotationGenerator() {
   }
 
   const handleSaveDraft = () => {
-    console.log("Saving draft...")
+    if (validateForm()) {
+      generateQuotationPDF({
+        quotationNumber: `QT-2024-${Date.now().toString().slice(-3)}`,
+        clientName: clientDetails.name,
+        projectName: "Residential Complex A",
+        date: new Date().toLocaleDateString("en-IN"),
+        items: items.map((item) => ({
+          name: item.description,
+          quantity: item.area,
+          rate: item.rate,
+          amount: item.amount,
+        })),
+        subtotal,
+        gstAmount,
+        total,
+        gstType: `${gstRate}%`,
+      })
+      toast({
+        title: "Draft Saved",
+        description: "Quotation PDF has been generated and downloaded.",
+      })
+    }
   }
 
   const handleGenerate = () => {
     if (validateForm()) {
-      console.log("Generating quotation...")
+      setIsGenerated(true)
+      toast({
+        title: "Quotation Generated",
+        description: "Your quotation has been generated successfully.",
+      })
     }
   }
 
@@ -117,6 +160,12 @@ export function QuotationGenerator() {
           <FileText className="size-3" />
           Auto-generated for projects under ₹5 Lakhs
         </Badge>
+        {isGenerated && (
+          <Badge className="gap-1.5 bg-success text-success-foreground">
+            <FileText className="size-3" />
+            Generated
+          </Badge>
+        )}
       </div>
 
       {/* Project Info */}
@@ -217,7 +266,7 @@ export function QuotationGenerator() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Quotation Items</CardTitle>
-              <CardDescription>Add items and quantities for the quotation</CardDescription>
+              <CardDescription>Add items and area for the quotation</CardDescription>
             </div>
             <Button onClick={addItem} size="sm" className="gap-2">
               <Plus className="size-4" />
@@ -226,15 +275,15 @@ export function QuotationGenerator() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40%]">Item Name</TableHead>
-                  <TableHead className="w-[15%]">Quantity</TableHead>
-                  <TableHead className="w-[15%]">Rate (₹)</TableHead>
-                  <TableHead className="w-[20%]">Amount (₹)</TableHead>
-                  <TableHead className="w-[10%] text-center">Action</TableHead>
+                  <TableHead className="min-w-[300px]">Item Description</TableHead>
+                  <TableHead className="w-[120px]">Area (Sft)</TableHead>
+                  <TableHead className="w-[120px]">Rate (₹)</TableHead>
+                  <TableHead className="w-[140px]">Amount (₹)</TableHead>
+                  <TableHead className="w-[80px] text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -242,21 +291,21 @@ export function QuotationGenerator() {
                   <TableRow key={item.id}>
                     <TableCell>
                       <Input
-                        placeholder="Enter item name"
-                        value={item.name}
+                        placeholder="Enter item description"
+                        value={item.description}
                         onChange={(e) => {
-                          updateItem(item.id, "name", e.target.value)
-                          if (errors[`itemName${index}`]) {
+                          updateItem(item.id, "description", e.target.value)
+                          if (errors[`itemDesc${index}`]) {
                             const newErrors = { ...errors }
-                            delete newErrors[`itemName${index}`]
+                            delete newErrors[`itemDesc${index}`]
                             setErrors(newErrors)
                           }
                         }}
-                        aria-invalid={!!errors[`itemName${index}`]}
-                        className="h-9"
+                        aria-invalid={!!errors[`itemDesc${index}`]}
+                        className="h-9 min-w-[280px]"
                       />
-                      {errors[`itemName${index}`] && (
-                        <p className="text-xs text-destructive mt-1">{errors[`itemName${index}`]}</p>
+                      {errors[`itemDesc${index}`] && (
+                        <p className="text-xs text-destructive mt-1">{errors[`itemDesc${index}`]}</p>
                       )}
                     </TableCell>
                     <TableCell>
@@ -264,20 +313,20 @@ export function QuotationGenerator() {
                         type="number"
                         min="0"
                         placeholder="0"
-                        value={item.quantity || ""}
+                        value={item.area || ""}
                         onChange={(e) => {
-                          updateItem(item.id, "quantity", Number.parseFloat(e.target.value) || 0)
-                          if (errors[`itemQty${index}`]) {
+                          updateItem(item.id, "area", Number.parseFloat(e.target.value) || 0)
+                          if (errors[`itemArea${index}`]) {
                             const newErrors = { ...errors }
-                            delete newErrors[`itemQty${index}`]
+                            delete newErrors[`itemArea${index}`]
                             setErrors(newErrors)
                           }
                         }}
-                        aria-invalid={!!errors[`itemQty${index}`]}
+                        aria-invalid={!!errors[`itemArea${index}`]}
                         className="h-9"
                       />
-                      {errors[`itemQty${index}`] && (
-                        <p className="text-xs text-destructive mt-1">{errors[`itemQty${index}`]}</p>
+                      {errors[`itemArea${index}`] && (
+                        <p className="text-xs text-destructive mt-1">{errors[`itemArea${index}`]}</p>
                       )}
                     </TableCell>
                     <TableCell>
@@ -302,7 +351,7 @@ export function QuotationGenerator() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="font-semibold">{item.amount.toLocaleString("en-IN")}</div>
+                      <div className="font-semibold">₹{item.amount.toLocaleString("en-IN")}</div>
                     </TableCell>
                     <TableCell className="text-center">
                       <Button

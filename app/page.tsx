@@ -7,6 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { FileText, Plus, Download, IndianRupee, TrendingUp, FileCheck } from "lucide-react"
+import Link from "next/link"
+import { useToast } from "@/hooks/use-toast"
+import { generateSampleDocumentPDF } from "@/lib/pdf-generator"
 
 const documents = [
   {
@@ -52,6 +55,16 @@ const documents = [
 ]
 
 export default function DashboardPage() {
+  const { toast } = useToast()
+
+  const handleDownload = (doc: { id: string; type: string }) => {
+    generateSampleDocumentPDF(doc.id, doc.type)
+    toast({
+      title: "PDF Downloaded",
+      description: `${doc.id}.pdf has been downloaded successfully.`,
+    })
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -59,13 +72,11 @@ export default function DashboardPage() {
         <Header />
 
         <main className="p-4 sm:p-6 lg:p-8">
-          {/* Page Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold tracking-tight mb-2">Billing & Finance Dashboard</h1>
             <p className="text-muted-foreground">Manage quotations, purchase orders, and invoices</p>
           </div>
 
-          {/* Stats Cards */}
           <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -120,23 +131,27 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-wrap gap-3 mb-6">
-            <Button className="gap-2">
-              <Plus className="size-4" />
-              Create Quotation
-            </Button>
-            <Button variant="outline" className="gap-2 bg-transparent">
-              <FileCheck className="size-4" />
-              Generate PO
-            </Button>
-            <Button variant="outline" className="gap-2 bg-transparent">
-              <IndianRupee className="size-4" />
-              Create GST Invoice
-            </Button>
+            <Link href="/quotation">
+              <Button className="gap-2">
+                <Plus className="size-4" />
+                Create Quotation
+              </Button>
+            </Link>
+            <Link href="/purchase-order">
+              <Button variant="outline" className="gap-2 bg-transparent">
+                <FileCheck className="size-4" />
+                Generate PO
+              </Button>
+            </Link>
+            <Link href="/invoice">
+              <Button variant="outline" className="gap-2 bg-transparent">
+                <IndianRupee className="size-4" />
+                Create GST Invoice
+              </Button>
+            </Link>
           </div>
 
-          {/* Recent Documents Table */}
           <Card>
             <CardHeader>
               <CardTitle>Recent Documents</CardTitle>
@@ -184,7 +199,7 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground">{doc.date}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)}>
                           <Download className="size-4" />
                         </Button>
                       </TableCell>
